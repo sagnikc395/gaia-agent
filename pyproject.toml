@@ -13,4 +13,5 @@ dependencies = [
     "smolagents>=1.26.0",
     "torch>=2.12.1",
     "transformers>=5.12.1",
+    "youtube-transcript-api>=1.2.4",
 ]
