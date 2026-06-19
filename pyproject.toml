@@ -7,13 +7,16 @@ requires-python = ">=3.13"
 dependencies = [
     "gradio>=6.19.0",
     "groq>=1.4.0",
+    "imageio>=2.37.3",
     "numpy>=2.4.6",
     "openai>=2.43.0",
     "pandas>=3.0.3",
+    "pytesseract>=0.3.13",
     "python-dotenv>=1.2.2",
     "smolagents>=1.26.0",
     "torch>=2.12.1",
     "transformers>=5.12.1",
     "wisper>=1.0.0",
     "youtube-transcript-api>=1.2.4",
+    "yt-dlp>=2026.6.9",
 ]
