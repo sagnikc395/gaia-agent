@@ -5,12 +5,47 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from functools import lru_cache
 
 from litellm import RateLimitError
+from .config import MAX_RETRY
+
+import time
+
+import re 
 
 
 class LocalTransformersModel:
     def __init__(self, model_id: str, **kwargs):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         self.model = AutoModelForCausalLM.from_pretrained(model_id, **kwargs)
-        self.pipelien = pipeline(
+        self.pipeline = pipeline(
             "text-generation", model=self.model, tokenizer=self.tokenizer
         )
+
+    def __call__(self, prompt: str, **kwargs):
+        outputs = self.pipeline(prompt, **kwargs)
+        return outputs[0]["generated_text"]
+
+
+class WrapperLiteLLMModel(LiteLLMModel):
+    def __call__(self, messages, **kwargs):
+        for attempt in range(MAX_RETRY):
+            try:
+                return super().__call__(messages, **kwargs)
+            except RateLimitError as e:
+                print(f"RateLimitError (attempt {attempt + 1}/{MAX_RETRY})")
+
+                # try to extract retry time from the exception string
+                # kinda hacky, need to improve 
+                match = re.search(r'"retryDelay": ? "(\d+)s"', str(e))
+                retry_seconds = int(match.group(1)) if match else 50
+
+                print(f"Retrying after {retry_seconds} s ...")
+                time.sleep(retry_seconds)
+
+        raise RateLimitError(f" ERROR: Rate limit exceeded after {MAX_RETRY} retires.")
+
+# cache the local model    
+@lru_cache(maxsize=1)
+def get_lite_llm_model(model_id: str, **kwargs) -> WrapperLiteLLMModel:
+    # return a LiteLLM model instance 
+    return WrapperLiteLLMModel(model_id=model_id,api_key=os.getenv("GEMIN_API"))
+
