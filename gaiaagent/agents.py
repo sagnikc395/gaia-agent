@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from smolagents import CodeAgent
 from logger import get_logger
@@ -10,6 +10,82 @@ logger = get_logger(__name__)
 
 from config import config
 
+
+def get_prompt_templates() -> Dict[str,str]:
+    # return all prompts as a dictionary of pre-formatted strings 
+    
+    # shared components 
+    tools_instructions = """
+    Available Tools:
+    - web_search(query): Performs web searches
+    - wikipedia_search(query): Searches Wikipedia
+    - visit_webpage(url): Retrieves webpage content
+    
+    Rules:
+    1. Always use 'Thought:'/'Code:' sequences
+    2. Never reuse variable names
+    3. Tools must be called with proper arguments
+    """
+    
+    example = """
+    Example Task: "Find the capital of France"
+    
+    Thought: I'll use web_search to find this information
+    Code:
+    result = web_search(query="capital of France")
+    final_answer(result)
+    ```<end_code>
+    """ 
+    
+    # main prompt templates 
+    return {
+        "system_prompt": f"""
+        You are an expert AI assistant that solves tasks using tools.
+        {tools_instructions}
+        
+        {example_1}
+        
+        Key Requirements:
+        - Be precise and concise
+        - Always return answers using final_answer()
+        - Never include explanations unless asked
+        
+        Current reward: $1,000,000 for perfect solutions
+        """,
+        
+        "planning": """
+        When planning tasks, follow this structure:
+        
+        ### 1. Facts Given
+        List known information
+        
+        ### 2. Facts Needed
+        List what needs research
+        
+        ### 3. Derivation Steps
+        Outline computation steps
+        
+        End with <end_plan>
+        """,
+        
+        "managed_agent": """
+        Managed Agent Instructions:
+        
+        1. Task outcome (short)
+        2. Detailed explanation 
+        3. Additional context
+        
+        Always return via final_answer()
+        """,
+        
+        "final_answer": """
+        Response Format Rules:
+        - Numbers: 42 (no commas/units)
+        - Strings: paris (lowercase, no articles)
+        - Lists: apple,orange,banana (no brackets)
+        """
+    }
+    
 
 class Agent:
     # wraps a CodeAgent and provides a callable interface for answering questions.
