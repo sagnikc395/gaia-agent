@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from smolagents import LiteLLMModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
@@ -6,11 +7,17 @@ from functools import lru_cache
 
 from litellm import RateLimitError
 from .config import MAX_RETRY
+#from groq import Groq 
+
+from dotenv import load_dotenv
 
 import time
 
 import re 
 
+
+
+load_dotenv()
 
 class LocalTransformersModel:
     def __init__(self, model_id: str, **kwargs):
@@ -47,5 +54,23 @@ class WrapperLiteLLMModel(LiteLLMModel):
 @lru_cache(maxsize=1)
 def get_lite_llm_model(model_id: str, **kwargs) -> WrapperLiteLLMModel:
     # return a LiteLLM model instance 
-    return WrapperLiteLLMModel(model_id=model_id,api_key=os.getenv("GEMIN_API"))
+    return WrapperLiteLLMModel(model_id=model_id,api_key=os.getenv("GROQ_API_KEY"),**kwargs)
 
+
+@lru_cache(maxsize=1)
+def get_local_model(model_id: str, **kwargs) -> LocalTransformersModel:
+    # return a local transformer modle 
+    return LocalTransformersModel(model_id=model_id,**kwargs)
+
+def get_model(model_type: str, model_id: str, **kwargs):
+    # return a model instance based on the specified type
+    
+    models: dict[str,callable[..., Any]] = {
+        "LiteLLMModel": get_lite_llm_model,
+        "LocalTransformerModel": get_local_model,
+    }
+    
+    if model_type not in models:
+        raise ValueError(f"Unknown model type: {model_type}")
+
+    return models[model_type](model_id,**kwargs)
