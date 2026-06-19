@@ -7,3 +7,9 @@ Objective: Building a AI agent for the GAIA benchmark .It combines different LLM
 
 Inference is done using Groq and GPT OSS 120B model.
 
+### Setup 
+
+Take your API keys from Groq and set it up as 
+```
+GROQ_API_KEY="<api-key>"
+```
