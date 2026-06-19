@@ -8,6 +8,7 @@ dependencies = [
     "gradio>=6.19.0",
     "groq>=1.4.0",
     "numpy>=2.4.6",
+    "openai>=2.43.0",
     "pandas>=3.0.3",
     "python-dotenv>=1.2.2",
     "smolagents>=1.26.0",
