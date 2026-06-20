@@ -1,3 +1,11 @@
+---
+title: Gaia Agent
+sdk: gradio
+app_file: app.py
+python_version: 3.13
+hf_oauth: true
+---
+
 ## gaia-agent
 
 made as part of final project for the HuggingFace Agents Course.
@@ -12,4 +20,9 @@ Inference is done using Groq and GPT OSS 120B model.
 Take your API keys from Groq and set it up as 
 ```
 GROQ_API_KEY="<api-key>"
+```
+
+For image questions, also set an OpenAI key:
+```
+OPENAI_API_KEY="<api-key>"
 ```
