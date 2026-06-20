@@ -3,8 +3,6 @@ import os
 from openai import OpenAI
 from smolagents import Tool
 
-client = OpenAI()
-
 
 class DescribeImageTool(Tool):
     """
@@ -86,6 +84,7 @@ class DescribeImageTool(Tool):
             prompt = self.get_prompt(description_type, custom_prompt)
 
             # Make the API call
+            client = OpenAI()
             response = client.chat.completions.create(
                 model="gpt-4.1",
                 messages=[

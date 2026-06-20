@@ -11,7 +11,6 @@ from typing import List, Optional
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from smolagents import tool, LiteLLMModel
-import google.generativeai as genai
 from pytesseract import image_to_string
 
 load_dotenv()
@@ -82,14 +81,19 @@ def ask_youtube_video(url: str, question: str) -> str:
     """
 
     try:
-        client = genai.Client(api_key=os.getenv('GEMINI_API'))
-        response = client.generate_content(
-            model=MODEL_ID,
+        from google import genai
+        from google.genai import types
+
+        api_key = os.getenv("GEMINI_API") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            return "Error asking Gemini about video: GEMINI_API or GOOGLE_API_KEY is not set"
+
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=MODEL_ID.removeprefix("gemini/"),
             contents=[
-                {"role": "user", "parts": [
-                    {"text": question},
-                    {"file_data": {"file_uri": url}}
-                ]}
+                types.Part.from_text(text=question),
+                types.Part.from_uri(file_uri=url, mime_type="video/mp4"),
             ]
         )
         return response.text

@@ -6,25 +6,26 @@ from typing import Dict, List
 
 
 # custom imports
-from agents import Agent
-from tool import get_tools
-from model import get_model
-
-from config import config
+from gaiaagent.agents import Agent
+from gaiaagent.tool import get_tools
+from gaiaagent.model import get_model
+from gaiaagent.config import config
 
 
 # question processing
-async def process_question(agent, question: str, task_id: str):
+async def process_question(agent, question: str, task_id: str, file_name: str | None = None):
     """
     process a single question and return both answer and full log entry
     """
     try:
-        answer = agent(question)
+        files = [file_name] if file_name else None
+        answer = agent(question, files=files)
         return {
             "submission": {"task_id": task_id, "submitted_answer": answer},
             "log": {
                 "Task ID": task_id,
                 "Question": question,
+                "File": file_name,
                 "Submitted Answer": answer,
             },
         }
@@ -32,10 +33,11 @@ async def process_question(agent, question: str, task_id: str):
     except Exception as e:
         error_msg = f"ERROR: {str(e)}"
         return {
-            "submission": {"task_id": task_id, "submitetd_answer": error_msg},
+            "submission": {"task_id": task_id, "submitted_answer": error_msg},
             "log": {
                 "Task ID": task_id,
                 "Question": question,
+                "File": file_name,
                 "Submitted Answer": error_msg,
             },
         }
@@ -46,7 +48,12 @@ async def run_questions_async(agent, questions_data: List[Dict]) -> tuple:
     logs = []
     
     for q in questions_data:
-        result = await process_question(agent, q["question"], q["task_id"])
+        result = await process_question(
+            agent,
+            q["question"],
+            q["task_id"],
+            q.get("file_name") or q.get("file_path"),
+        )
         submissions.append(result["submission"])
         logs.append(result["log"])
     
@@ -94,7 +101,6 @@ async def run_and_submit_all( profile: gr.OAuthProfile | None):
              print("Fetched questions list is empty.")
              return "Fetched questions list is empty or invalid format.", None
         print(f"Fetched {len(questions_data)} questions.")
-        questions_data = questions_data[:2]
     except requests.exceptions.RequestException as e:
         print(f"Error fetching questions: {e}")
         return f"Error fetching questions: {e}", None
@@ -163,42 +169,39 @@ async def run_and_submit_all( profile: gr.OAuthProfile | None):
         return status_message, results_df
 
 
-with gr.Blocks() as demo:
-    gr.Markdown("# Basic Agent Evaluation Runner")
-    gr.Markdown(
-        """
-        **Instructions:**
-        1.  Please clone this space, then modify the code to define your agent's logic, the tools, the necessary packages, etc ...
-        2.  Log in to your Hugging Face account using the button below. This uses your HF username for submission.
-        3.  Click 'Run Evaluation & Submit All Answers' to fetch questions, run your agent, submit answers, and see the score.
-        """
-    )
+def should_enable_hf_login() -> bool:
+    return bool(os.getenv("SPACE_ID") or os.getenv("SPACE_HOST") or os.getenv("HF_TOKEN"))
 
-    gr.LoginButton()
 
-    run_button = gr.Button("Run Evaluation & Submit All Answers")
+def create_demo() -> gr.Blocks:
+    with gr.Blocks() as demo:
+        gr.Markdown("# Basic Agent Evaluation Runner")
+        gr.Markdown(
+            """
+            **Instructions:**
+            1.  Please clone this space, then modify the code to define your agent's logic, the tools, the necessary packages, etc ...
+            2.  Log in to your Hugging Face account using the button below. This uses your HF username for submission.
+            3.  Click 'Run Evaluation & Submit All Answers' to fetch questions, run your agent, submit answers, and see the score.
+            """
+        )
 
-    status_output = gr.Textbox(label="Run Status / Submission Result", lines=5, interactive=False)
-    # Removed max_rows=10 from DataFrame constructor
-    results_table = gr.DataFrame(label="Questions and Agent Answers", wrap=True)
+        if should_enable_hf_login():
+            gr.LoginButton()
 
-    run_button.click(
-        fn=run_and_submit_all,
-        outputs=[status_output, results_table]
-    )
-    
-    gr.LoginButton()
-    
-    run_button = gr.Button("Run Evaluation and Submit All Answers")
-    
-    status_output = gr.Textbox(label="Run Status / Submission Result",lines=5,interactive=False)
-    
-    results_table = gr.DataFrame(label="Questions and Agent Answers",wrap=True)
-    
-    run_button.click(
-        fn=run_and_submit_all,
-        outputs=[status_output,results_table]
-    )
+        run_button = gr.Button("Run Evaluation & Submit All Answers")
+
+        status_output = gr.Textbox(label="Run Status / Submission Result", lines=5, interactive=False)
+        results_table = gr.DataFrame(label="Questions and Agent Answers", wrap=True)
+
+        run_button.click(
+            fn=run_and_submit_all,
+            outputs=[status_output, results_table]
+        )
+
+    return demo
+
+
+demo = create_demo() if os.getenv("SPACE_ID") else None
     
 
 if __name__ == '__main__':
@@ -223,4 +226,5 @@ if __name__ == '__main__':
     print("-"*(60 + len(" App Starting ")) + "\n")
 
     print("Launching Gradio Interface for Basic Agent Evaluation...")
+    demo = demo or create_demo()
     demo.launch(debug=True, share=False)

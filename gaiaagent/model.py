@@ -1,12 +1,12 @@
 import os
-from typing import Any
+from typing import Any, Callable
 
 from smolagents import LiteLLMModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from functools import lru_cache
 
 from litellm import RateLimitError
-from .config import MAX_RETRY
+from .config import config
 # from groq import Groq
 
 from dotenv import load_dotenv
@@ -34,11 +34,13 @@ class LocalTransformersModel:
 
 class WrapperLiteLLMModel(LiteLLMModel):
     def __call__(self, messages, **kwargs):
-        for attempt in range(MAX_RETRY):
+        last_error = None
+        for attempt in range(config.MAX_RETRY):
             try:
                 return super().__call__(messages, **kwargs)
             except RateLimitError as e:
-                print(f"RateLimitError (attempt {attempt + 1}/{MAX_RETRY})")
+                last_error = e
+                print(f"RateLimitError (attempt {attempt + 1}/{config.MAX_RETRY})")
 
                 # try to extract retry time from the exception string
                 # kinda hacky, need to improve
@@ -48,7 +50,9 @@ class WrapperLiteLLMModel(LiteLLMModel):
                 print(f"Retrying after {retry_seconds} s ...")
                 time.sleep(retry_seconds)
 
-        raise RateLimitError(f" ERROR: Rate limit exceeded after {MAX_RETRY} retires.")
+        raise RuntimeError(
+            f"Rate limit exceeded after {config.MAX_RETRY} retries."
+        ) from last_error
 
 
 # cache the local model
@@ -69,7 +73,7 @@ def get_local_model(model_id: str, **kwargs) -> LocalTransformersModel:
 def get_model(model_type: str, model_id: str, **kwargs):
     # return a model instance based on the specified type
 
-    models: dict[str, callable[..., Any]] = {
+    models: dict[str, Callable[..., Any]] = {
         "LiteLLMModel": get_lite_llm_model,
         "LocalTransformerModel": get_local_model,
     }

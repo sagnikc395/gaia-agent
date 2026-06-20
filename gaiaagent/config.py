@@ -7,7 +7,7 @@ class GAIAAgentConfig:
 
     ## model config
     # since using groq,using gpt-oss-120b for inference
-    MODEL_ID = "openai/gpt-oss-120b"
+    MODEL_ID = "groq/openai/gpt-oss-120b"
 
     ## max retries for
     MAX_RETRY = 5
