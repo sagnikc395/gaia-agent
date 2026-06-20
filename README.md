@@ -1,9 +1,13 @@
 ---
 title: Gaia Agent
+colorFrom: indigo
+colorTo: gray
 sdk: gradio
+sdk_version: 6.19.0
 app_file: app.py
 python_version: 3.13
 hf_oauth: true
+pinned: false
 ---
 
 ## gaia-agent
